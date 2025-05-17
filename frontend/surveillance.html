@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelAI - Surveillance</title>
+    <link rel="stylesheet" href="src/css/styles.css">
+    <link rel="stylesheet" href="src/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-eye"></i>
+                    <h2>SentinelAI</h2>
+                </div>
+                <button class="close-sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <nav class="sidebar-nav">
+                    <ul>
+                        <li>
+                            <a href="surveillance.html" class="nav-link active">
+                                <i class="fas fa-video"></i>
+                                <span>Surveillance</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="faces.html" class="nav-link">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Manage Faces</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="logs.html" class="nav-link">
+                                <i class="fas fa-history"></i>
+                                <span>Detection Logs</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="settings.html" class="nav-link">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                        </li>
+                        <li class="admin-only">
+                            <a href="users.html" class="nav-link">
+                                <i class="fas fa-users-cog"></i>
+                                <span>User Management</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <a href="#" id="logout-btn" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+                
+                <div class="header-right">
+                    <div class="notification-bell" id="notification-bell">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-count" id="notification-count">0</span>
+                    </div>
+                    
+                    <div class="user-profile">
+                        <div class="user-info">
+                            <span class="user-name" id="user-name">Admin User</span>
+                            <span class="user-role" id="user-role">Administrator</span>
+                        </div>
+                        <div class="user-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Notification Panel -->
+            <div class="notification-panel" id="notification-panel">
+                <div class="notification-header">
+                    <h3>Notifications</h3>
+                    <button class="clear-all" id="clear-notifications">Clear All</button>
+                </div>
+                <div class="notification-list" id="notification-list">
+                    <!-- Notifications will be added here dynamically -->
+                    <div class="empty-notifications">No new notifications</div>
+                </div>
+            </div>
+            
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Surveillance Page -->
+                <div class="content-page active" id="surveillance-page">
+                    <div class="page-header">
+                        <h1>Surveillance</h1>
+                        <p>Monitor and control your surveillance cameras</p>
+                    </div>
+                    
+                    <div class="surveillance-controls">
+                        <div class="control-buttons">
+                            <button class="btn btn-primary" id="start-surveillance">
+                                <i class="fas fa-play"></i> Start Surveillance
+                            </button>
+                            <button class="btn btn-danger" id="stop-surveillance" disabled>
+                                <i class="fas fa-stop"></i> Stop Surveillance
+                            </button>
+                        </div>
+                        
+                        <div class="surveillance-status">
+                            <span class="status-indicator offline"></span>
+                            <span class="status-text">Offline</span>
+                        </div>
+                    </div>
+                    
+                    <div class="camera-grid">
+                        <div class="camera-feed main-feed">
+                            <div class="camera-header">
+                                <h3>Webcam</h3>
+                                <div class="camera-controls">
+                                    <button class="camera-control" title="Fullscreen">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="camera-content">
+                                <video id="webcam-video" autoplay playsinline muted style="display: none; width: 100%; height: auto; max-height: 100%; border-radius: 8px;"></video>
+                                <canvas id="webcam-canvas" style="display: none;"></canvas>
+                                <div class="camera-placeholder" id="webcam-placeholder">
+                                    <i class="fas fa-video-slash"></i>
+                                    <p>Webcam not connected</p>
+                                    <p>Click "Start Surveillance" to connect</p>
+                                </div>
+                            </div>
+                            <div class="camera-footer">
+                                <span class="camera-status" id="webcam-status">Disconnected</span>
+                                <span class="camera-time" id="camera-time">00:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="src/js/main.js"></script>
+    <script src="src/js/dashboard.js"></script>
+    <script src="src/js/surveillance.js"></script>
+</body>
+</html>
