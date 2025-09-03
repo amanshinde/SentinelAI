@@ -1,4 +1,10 @@
 const Camera = require('../models/Camera');
+const Face = require('../models/Face');
+const Detection = require('../models/Detection');
+const faceRecognitionService = require('../services/faceRecognitionService');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 
 // @desc    Get all cameras
 // @route   GET /api/cameras

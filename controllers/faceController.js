@@ -2,6 +2,7 @@ const Face = require('../models/Face');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const faceRecognitionService = require('../services/faceRecognitionService');
 
 // @desc    Get all faces
 // @route   GET /api/faces
@@ -77,9 +78,9 @@ exports.createFace = async (req, res) => {
                 return res.status(500).json({ success: false, message: 'Problem with file upload' });
             }
             
-            // For now, we'll use a placeholder for face encodings
-            // In a real implementation, this would use a face recognition library
-            const placeholderEncodings = Array(128).fill(0).map(() => Math.random());
+            // Generate face encodings using face recognition service
+            await faceRecognitionService.initialize();
+            const faceEncodings = await faceRecognitionService.generateFaceEncoding(uploadPath);
             
             // Create face in database
             const face = await Face.create({
@@ -87,7 +88,7 @@ exports.createFace = async (req, res) => {
                 category,
                 notes,
                 imagePath: `uploads/faces/${fileName}`,
-                encodings: placeholderEncodings,
+                encodings: faceEncodings,
                 createdBy: req.user.id
             });
             
@@ -151,9 +152,10 @@ exports.updateFace = async (req, res) => {
             // Update image path
             updateData.imagePath = `uploads/faces/${fileName}`;
             
-            // For a real implementation, we would recalculate face encodings here
-            const placeholderEncodings = Array(128).fill(0).map(() => Math.random());
-            updateData.encodings = placeholderEncodings;
+            // Recalculate face encodings for the new image
+            await faceRecognitionService.initialize();
+            const newEncodings = await faceRecognitionService.generateFaceEncoding(uploadPath);
+            updateData.encodings = newEncodings;
         }
         
         // Update face in database

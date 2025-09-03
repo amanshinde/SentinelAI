@@ -4,6 +4,8 @@ const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const morgan = require('morgan');
+const http = require('http');
+const socketIo = require('socket.io');
 const connectDB = require('./config/db');
 
 // Import routes
@@ -14,6 +16,13 @@ const detectionRoutes = require('./routes/detections');
 const settingsRoutes = require('./routes/settings');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -45,9 +54,21 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
+// Make io available to routes
+app.set('io', io);
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+    
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
 // Connect to MongoDB and start server
 connectDB().then(() => {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 }).catch(err => {

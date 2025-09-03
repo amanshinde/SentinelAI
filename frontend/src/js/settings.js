@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationEmailInput = document.getElementById('notification-email');
     const notificationSMSInput = document.getElementById('notification-sms');
     const detectionThresholdInput = document.getElementById('detection-threshold');
-    const thresholdValue = document.getElementById('threshold-value');
+    const thresholdValue = document.querySelector('.range-value');
     const enableNotificationsCheckbox = document.getElementById('enable-notifications');
     const notifyRestrictedOnlyCheckbox = document.getElementById('notify-restricted-only');
     const addCameraBtn = document.getElementById('add-camera-btn');
@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update threshold value display
     if (detectionThresholdInput && thresholdValue) {
+        // Initial update to ensure the display matches the slider value
+        thresholdValue.textContent = `${detectionThresholdInput.value}%`;
+        
+        // Add event listener to update the display when the slider changes
         detectionThresholdInput.addEventListener('input', function() {
             thresholdValue.textContent = `${this.value}%`;
         });
@@ -83,8 +87,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (detectionThresholdInput) {
                 const thresholdPercent = Math.round(settings.detectionThreshold * 100);
                 detectionThresholdInput.value = thresholdPercent;
-                if (thresholdValue) {
-                    thresholdValue.textContent = `${thresholdPercent}%`;
+                
+                // Update the threshold display value
+                const rangeValueElement = document.querySelector('.range-value');
+                if (rangeValueElement) {
+                    rangeValueElement.textContent = `${thresholdPercent}%`;
                 }
             }
             

@@ -5,7 +5,6 @@ SentinelAI is a comprehensive face recognition system for CCTV surveillance, des
 ## Features
 
 - **Face Management**: Upload and manage known faces with labels/names
-- **Webcam Integration**: Monitor webcam feed for face detection
 - **Real-time Detection**: Detect and identify faces in real-time
 - **Automated Alerts**: Receive notifications when faces are detected
 - **Detection Logs**: Review and search through historical detection events
@@ -19,7 +18,6 @@ SentinelAI is a comprehensive face recognition system for CCTV surveillance, des
 - **Backend**: Node.js with Express.js
 - **Database**: MongoDB
 - **Authentication**: JWT (JSON Web Tokens)
-- **Face Recognition**: Placeholder for integration with face_recognition library
 
 ## Project Structure
 
@@ -50,26 +48,62 @@ sentinelai/
 
 ## Installation
 
-1. Clone the repository
-2. Install dependencies:
+### Prerequisites
+- **Node.js** (v16 or higher)
+- **MongoDB** (v4.4 or higher)
+- **Webcam** (for real-time surveillance)
+
+### Setup Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd facerecog
    ```
+
+2. **Install dependencies**
+   ```bash
    npm install
    ```
-3. Configure environment variables in `.env` file:
+
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file with your configuration:
    ```
    PORT=5000
    MONGODB_URI=mongodb://localhost:27017/sentinelai
-   JWT_SECRET=your_jwt_secret
+   JWT_SECRET=your_super_secret_jwt_key_here
    ADMIN_EMAIL=admin@sentinelai.com
    ADMIN_PASSWORD=admin123
-   ADMIN_USERNAME=admin
+   ADMIN_USERNAME=Administrator
    ```
-4. Start the server:
+
+4. **Download Face Recognition Models** (Optional but recommended)
+   - Visit: https://github.com/justadudewhohacks/face-api.js/tree/master/weights
+   - Download all model files and place them in `models/face-api/`
+   - See `models/face-api/README.md` for detailed instructions
+
+5. **Start MongoDB**
+   ```bash
+   # On Windows
+   net start MongoDB
+   
+   # On macOS/Linux
+   sudo systemctl start mongod
    ```
+
+6. **Start the server**
+   ```bash
    npm start
    ```
 
-**Note**: On first startup, the system will automatically create an admin user with the credentials specified in the `.env` file.
+7. **Access the application**
+   - Open your browser and go to `http://localhost:5000`
+   - Login with admin credentials from your `.env` file
+
+**Note**: On first startup, the system automatically creates an admin user with the credentials specified in the `.env` file.
 
 ## Development
 
@@ -103,6 +137,7 @@ npm run dev
 - `PUT /api/cameras/:id/status` - Update camera connection status
 - `POST /api/cameras/webcam/start` - Start webcam surveillance
 - `POST /api/cameras/webcam/stop` - Stop webcam surveillance
+- `POST /api/cameras/webcam/detect` - Process webcam frame for face detection
 
 ### Detections
 - `GET /api/detections` - Get all detections (with filtering)
@@ -114,13 +149,48 @@ npm run dev
 - `GET /api/settings` - Get system settings
 - `PUT /api/settings` - Update system settings
 
+## Usage Guide
+
+### Getting Started
+1. **Login**: Use admin credentials from your `.env` file
+2. **Add Faces**: Go to "Manage Faces" to upload known faces
+3. **Start Surveillance**: Click "Start Webcam" on the surveillance page
+4. **Monitor Detections**: View real-time detections and alerts
+
+### Key Features
+- **Real-time Face Detection**: Uses webcam for live surveillance
+- **Face Recognition**: Matches detected faces against known database
+- **Detection Categories**: Employee, Visitor, Restricted access levels
+- **Live Notifications**: Real-time alerts for face detections
+- **Detection History**: Complete log of all detection events
+- **User Management**: Admin can create and manage user accounts
+
+### Face Recognition Modes
+- **Full Mode**: With face-api.js models for accurate recognition
+- **Fallback Mode**: Random encodings for testing without models
+
+## Troubleshooting
+
+### Common Issues
+1. **Webcam not working**: Check browser permissions for camera access
+2. **No face detection**: Ensure face-api.js models are downloaded
+3. **MongoDB connection**: Verify MongoDB is running and accessible
+4. **Port conflicts**: Change PORT in `.env` if 5000 is occupied
+
+### Performance Tips
+- Use good lighting for better face detection
+- Position camera at eye level for optimal results
+- Ensure stable internet connection for real-time features
+
 ## Future Enhancements
 
-- Integration with actual face recognition model
-- Advanced face detection algorithms
-- Real-time video streaming from multiple sources
-- Mobile app integration
-- Advanced analytics dashboard
-- Multi-factor authentication
-- Email notifications for important events
-- Customizable detection zones
+- ✅ Real-time webcam surveillance
+- ✅ Face recognition and matching
+- ✅ Detection notifications and alerts
+- ✅ User management system
+- 🔄 Integration with IP cameras
+- 🔄 Mobile app integration
+- 🔄 Advanced analytics dashboard
+- 🔄 Multi-factor authentication
+- 🔄 Email notifications for events
+- 🔄 Customizable detection zones
