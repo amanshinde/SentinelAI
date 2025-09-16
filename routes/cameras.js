@@ -10,7 +10,7 @@ const {
 const {
     startWebcamSurveillance,
     stopWebcamSurveillance,
-    processWebcamFrame
+    detectWebcamFrame
 } = require('../controllers/webcamController');
 const { protect } = require('../middleware/auth');
 
@@ -36,6 +36,6 @@ router.route('/webcam/stop')
     .post(protect, stopWebcamSurveillance);
 
 router.route('/webcam/detect')
-    .post(protect, processWebcamFrame);
+    .post(protect, detectWebcamFrame);
 
 module.exports = router;

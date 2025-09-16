@@ -67,10 +67,13 @@ exports.stopWebcamSurveillance = async (req, res) => {
     }
 };
 
-// @desc    Process webcam frame for face detection
+// Store last detection times for each face to throttle logging
+const lastDetectionTimes = new Map();
+
+// @desc    Detect faces in webcam frame
 // @route   POST /api/cameras/webcam/detect
 // @access  Private
-exports.processWebcamFrame = async (req, res) => {
+exports.detectWebcamFrame = async (req, res) => {
     try {
         if (!req.files || !req.files.frame) {
             return res.status(400).json({ success: false, message: 'No frame provided' });
@@ -155,10 +158,49 @@ exports.processWebcamFrame = async (req, res) => {
                 0.6
             );
 
-            if (bestMatch && bestMatch.confidence > 0.7) {
+            console.log('Face matching result:', { 
+                hasMatch: !!bestMatch, 
+                confidence: bestMatch?.confidence, 
+                threshold: 0.6,
+                matchName: bestMatch?.name 
+            });
+
+            if (bestMatch && bestMatch.confidence > 0.4) { // Lower threshold for testing
+                // Check if we should throttle this detection (only log once per minute per face)
+                const now = Date.now();
+                const lastDetectionTime = lastDetectionTimes.get(bestMatch.id);
+                const oneMinute = 60 * 1000; // 60 seconds in milliseconds
+                
+                if (lastDetectionTime && (now - lastDetectionTime) < oneMinute) {
+                    console.log(`Throttling detection for ${bestMatch.name} - last logged ${Math.round((now - lastDetectionTime) / 1000)}s ago`);
+                    // Still return the match but don't create a new detection record
+                    results.push({
+                        detection: null, // No new detection record
+                        box: detectedFace.box,
+                        match: {
+                            name: bestMatch.name,
+                            category: bestMatch.category,
+                            confidence: bestMatch.confidence
+                        },
+                        throttled: true
+                    });
+                    continue;
+                }
+                
+                console.log(`Creating detection record for: ${bestMatch.name} (confidence: ${bestMatch.confidence})`);
+                
+                // Update last detection time for this face
+                lastDetectionTimes.set(bestMatch.id, now);
+                
                 // Save detection image
                 const detectionFileName = `detection_${Date.now()}_${uuidv4()}.jpg`;
                 const detectionPath = path.join(__dirname, '../uploads/detections', detectionFileName);
+                
+                // Ensure detections directory exists
+                const detectionsDir = path.dirname(detectionPath);
+                if (!fs.existsSync(detectionsDir)) {
+                    fs.mkdirSync(detectionsDir, { recursive: true });
+                }
                 
                 // Copy temp file to detection file
                 fs.copyFileSync(tempPath, detectionPath);
@@ -170,6 +212,8 @@ exports.processWebcamFrame = async (req, res) => {
                     confidence: bestMatch.confidence,
                     imagePath: `uploads/detections/${detectionFileName}`
                 });
+
+                console.log('Detection record created:', detection._id);
 
                 // Populate detection for response
                 const populatedDetection = await Detection.findById(detection._id)
@@ -185,6 +229,10 @@ exports.processWebcamFrame = async (req, res) => {
                         confidence: bestMatch.confidence
                     }
                 });
+
+                console.log(`Detection saved: ${bestMatch.name} at ${new Date().toISOString()}`);
+            } else {
+                console.log('No match found or confidence too low for detection logging');
             }
         }
 

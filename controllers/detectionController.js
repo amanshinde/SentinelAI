@@ -13,10 +13,28 @@ exports.getDetections = async (req, res) => {
         
         // Filter by date range
         if (req.query.startDate && req.query.endDate) {
+            const startDate = new Date(req.query.startDate);
+            const endDate = new Date(req.query.endDate);
+            // Set end date to end of day in local timezone
+            endDate.setHours(23, 59, 59, 999);
+            
+            // Add timezone offset to handle IST properly
+            const timezoneOffset = new Date().getTimezoneOffset() * 60000;
+            const localStartDate = new Date(startDate.getTime() - timezoneOffset);
+            const localEndDate = new Date(endDate.getTime() - timezoneOffset);
+            
             query.timestamp = {
-                $gte: new Date(req.query.startDate),
-                $lte: new Date(req.query.endDate)
+                $gte: localStartDate,
+                $lte: localEndDate
             };
+            
+            console.log('Detection query date range (local):', { 
+                startDate: localStartDate.toISOString(), 
+                endDate: localEndDate.toISOString(),
+                originalStart: req.query.startDate,
+                originalEnd: req.query.endDate,
+                timezoneOffset: timezoneOffset / 60000 + ' minutes'
+            });
         }
         
         // Filter by camera
@@ -35,6 +53,8 @@ exports.getDetections = async (req, res) => {
         const limit = parseInt(req.query.limit, 10) || 10;
         const startIndex = (page - 1) * limit;
         
+        console.log('Detection query:', query);
+        
         // Execute query
         const detections = await Detection.find(query)
             .populate({
@@ -49,8 +69,18 @@ exports.getDetections = async (req, res) => {
             .skip(startIndex)
             .limit(limit);
         
+        console.log(`Found ${detections.length} detections`);
+        
         // Get total count
         const total = await Detection.countDocuments(query);
+        
+        console.log('Detection response:', { 
+            count: detections.length, 
+            total, 
+            page, 
+            limit,
+            query: req.query 
+        });
         
         res.status(200).json({
             success: true,

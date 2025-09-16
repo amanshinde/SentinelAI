@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get dashboard functions
     const { API_URL, getAuthHeaders, addNotification } = window.dashboardFunctions || {};
     
+    // Debug: Check if dashboard functions are available
+    if (!window.dashboardFunctions) {
+        console.error('Dashboard functions not available - dashboard.js may not be loaded');
+    }
+    
     // DOM Elements
     const logsTableBody = document.getElementById('logs-table-body');
     const dateFromInput = document.getElementById('date-from');
@@ -19,15 +24,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportLogsBtn = document.getElementById('export-logs');
     const logDetailsModal = document.getElementById('log-details-modal');
     
-    // Set default date range (last 7 days)
+    // Set default date range (today only to catch recent detections)
     const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
+    const todayStr = today.toISOString().split('T')[0];
     
-    if (dateFromInput && dateToInput) {
-        dateFromInput.valueAsDate = sevenDaysAgo;
-        dateToInput.valueAsDate = today;
+    if (document.getElementById('date-from')) {
+        document.getElementById('date-from').value = todayStr;
     }
+    if (document.getElementById('date-to')) {
+        document.getElementById('date-to').value = todayStr;
+    }
+    
+    console.log('Default date range set to today:', todayStr);
     
     // Load cameras for filter dropdown
     async function loadCameras() {
@@ -96,13 +104,17 @@ document.addEventListener('DOMContentLoaded', function() {
             queryParams.append('limit', filters.limit || 10);
             
             // Make API request
-            const response = await fetch(`${API_URL}/detections?${queryParams.toString()}`, {
+            const apiUrl = API_URL || '/api';
+            console.log('Loading detection logs from:', `${apiUrl}/detections?${queryParams.toString()}`);
+            
+            const response = await fetch(`${apiUrl}/detections?${queryParams.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             
             const data = await response.json();
+            console.log('Detection logs response:', { status: response.status, count: data.data?.length, data });
             
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to load detection logs');
@@ -112,10 +124,13 @@ document.addEventListener('DOMContentLoaded', function() {
             logsTableBody.innerHTML = '';
             
             // Check if no logs found
-            if (data.data.length === 0) {
-                logsTableBody.innerHTML = '<tr><td colspan="6" class="empty-cell">No detection logs found</td></tr>';
+            if (!data.data || data.data.length === 0) {
+                logsTableBody.innerHTML = '<tr><td colspan="6" class="empty-cell">No detection logs found for the selected period</td></tr>';
+                console.log('No detection logs found');
                 return;
             }
+            
+            console.log(`Rendering ${data.data.length} detection logs`);
             
             // Render logs
             data.data.forEach(log => {
@@ -272,14 +287,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Get current filters
     function getFilters() {
-        return {
-            startDate: dateFromInput ? dateFromInput.value : null,
-            endDate: dateToInput ? dateToInput.value : null,
-            camera: cameraFilterInput ? cameraFilterInput.value : 'all',
-            category: categoryFilterInput ? categoryFilterInput.value : 'all',
+        // Get filters from form
+        const filters = {
+            startDate: document.getElementById('date-from')?.value || todayStr,
+            endDate: document.getElementById('date-to')?.value || todayStr,
+            camera: document.getElementById('camera-filter')?.value,
+            category: document.getElementById('category-filter')?.value,
             page: 1,
             limit: 10
         };
+        
+        console.log('Filters being used:', filters);
+        return filters;
     }
     
     // Apply filters
