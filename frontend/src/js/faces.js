@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get dashboard functions
     const { API_URL, getAuthHeaders, addNotification } = window.dashboardFunctions || {};
     
+    // Debug: Check if dashboard functions are available
+    if (!window.dashboardFunctions) {
+        console.error('Dashboard functions not available - dashboard.js may not be loaded');
+    }
+    
     // DOM Elements
     const facesGrid = document.getElementById('faces-grid');
     const addFaceBtn = document.getElementById('add-face-btn');
@@ -21,9 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show add face modal
     if (addFaceBtn && addFaceModal) {
-        addFaceBtn.addEventListener('click', function() {
+        addFaceBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Add Face button clicked');
             addFaceModal.classList.add('active');
+            console.log('Modal should be visible now');
         });
+    } else {
+        console.error('Add Face button or modal not found:', { addFaceBtn: !!addFaceBtn, addFaceModal: !!addFaceModal });
     }
 
     // Close modals
@@ -98,7 +108,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('image', fileInput.files[0]);
                 
                 // Send request to API
-                const response = await fetch(`${API_URL}/faces`, {
+                const apiUrl = API_URL || '/api';
+                console.log('Sending request to:', `${apiUrl}/faces`);
+                
+                const response = await fetch(`${apiUrl}/faces`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -236,21 +249,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const deleteButtons = document.querySelectorAll('.delete-face');
             deleteButtons.forEach(btn => btn.disabled = true);
             
-            const response = await fetch(`${API_URL}/faces/${id}`, {
+            const apiUrl = API_URL || '/api';
+            console.log('Deleting face with ID:', id);
+            console.log('Delete URL:', `${apiUrl}/faces/${id}`);
+            
+            const response = await fetch(`${apiUrl}/faces/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             
+            console.log('Delete response status:', response.status);
+            
             const data = await response.json();
+            console.log('Delete response data:', data);
             
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to delete face');
             }
             
-            // Success
-            addNotification(`Face "${name}" deleted successfully`, 'success');
+            // Success - use proper notification function
+            if (addNotification) {
+                addNotification(`Face "${name}" deleted successfully`, 'success');
+            } else {
+                alert(`Face "${name}" deleted successfully`);
+            }
             
             // Remove face card from grid
             const faceCard = facesGrid.querySelector(`.face-card[data-id="${id}"]`);
@@ -265,7 +289,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Error deleting face:', error);
-            addNotification(error.message || 'Failed to delete face', 'error');
+            if (addNotification) {
+                addNotification(error.message || 'Failed to delete face', 'error');
+            } else {
+                alert(error.message || 'Failed to delete face');
+            }
         } finally {
             // Re-enable delete buttons
             const deleteButtons = document.querySelectorAll('.delete-face');

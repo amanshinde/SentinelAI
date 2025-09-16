@@ -1,10 +1,18 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const sharp = require('sharp');
+const PythonBridge = require('./pythonBridge');
 
+/**
+ * Enhanced Face Recognition Service with dlib integration
+ * Uses dlib models for high-accuracy face recognition with fallback mode
+ */
 class FaceRecognitionService {
     constructor() {
         this.isInitialized = false;
+        this.useFallback = true; // Default to fallback mode
+        this.pythonBridge = new PythonBridge();
+        this.dlibAvailable = false;
         this.modelsPath = path.join(__dirname, '../models/face-api');
     }
 
@@ -12,45 +20,147 @@ class FaceRecognitionService {
         if (this.isInitialized) return;
 
         try {
-            // Create models directory if it doesn't exist
-            if (!fs.existsSync(this.modelsPath)) {
-                fs.mkdirSync(this.modelsPath, { recursive: true });
+            // Check if dlib is available
+            const dlibCheck = await this.pythonBridge.checkDependencies();
+            
+            if (dlibCheck.success && dlibCheck.dlibAvailable) {
+                console.log('Dlib face recognition available - using high-accuracy mode');
+                this.dlibAvailable = true;
+                this.useFallback = false;
+                
+                // Initialize dlib service
+                const initResult = await this.pythonBridge.initialize();
+                if (!initResult.success) {
+                    console.warn('Dlib initialization failed, falling back to basic mode:', initResult.error);
+                    this.dlibAvailable = false;
+                    this.useFallback = true;
+                }
+            } else {
+                console.log('Dlib not available - using fallback mode');
+                console.log('Install Python, dlib, opencv-python, and numpy for enhanced face recognition');
+                this.dlibAvailable = false;
+                this.useFallback = true;
             }
-
-            // For now, we'll use fallback mode since canvas dependency failed
-            // This can be upgraded later when face-api.js models are properly set up
-            console.log('Face recognition service initialized in fallback mode');
-            console.log('To enable full face recognition, install canvas dependency and face-api.js models');
+            
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize face recognition service:', error);
-            this.isInitialized = false;
+            this.dlibAvailable = false;
+            this.useFallback = true;
+            this.isInitialized = true; // Still initialize in fallback mode
         }
     }
 
     async detectFaces(imagePath) {
-        // Always use fallback detection for now
-        console.log('Using fallback face detection for:', imagePath);
-        return this.fallbackDetection();
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+        
+        if (this.dlibAvailable && !this.useFallback) {
+            console.log('Using dlib face detection for:', imagePath);
+            const result = await this.pythonBridge.detectFaces(imagePath);
+            
+            if (result.success) {
+                return result.detections;
+            } else {
+                console.warn('Dlib detection failed, using fallback:', result.error);
+                return this.fallbackDetection();
+            }
+        } else {
+            console.log('Using fallback face detection for:', imagePath);
+            return this.fallbackDetection();
+        }
     }
 
     async generateFaceEncoding(imagePath) {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+        
         console.log('Generating face encoding for:', imagePath);
-        // Always use random encoding for fallback mode
-        return this.generateRandomEncoding();
+        
+        if (this.dlibAvailable && !this.useFallback) {
+            const result = await this.pythonBridge.generateEncoding(imagePath);
+            
+            if (result.success) {
+                return result.encoding;
+            } else {
+                console.warn('Dlib encoding failed, using fallback:', result.error);
+                return this.generateRandomEncoding();
+            }
+        } else {
+            return this.generateRandomEncoding();
+        }
     }
 
     async compareFaces(encoding1, encoding2, threshold = 0.6) {
-        // Always use fallback comparison
-        return this.fallbackComparison(encoding1, encoding2, threshold);
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+        
+        if (this.dlibAvailable && !this.useFallback) {
+            const result = await this.pythonBridge.compareFaces(encoding1, encoding2, threshold);
+            
+            if (result.success) {
+                return {
+                    distance: result.distance,
+                    match: result.match,
+                    confidence: result.confidence
+                };
+            } else {
+                console.warn('Dlib comparison failed, using fallback:', result.error);
+                return this.fallbackComparison(encoding1, encoding2, threshold);
+            }
+        } else {
+            return this.fallbackComparison(encoding1, encoding2, threshold);
+        }
     }
 
     async findBestMatch(unknownEncoding, knownEncodings, threshold = 0.6) {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+        
+        if (this.dlibAvailable && !this.useFallback) {
+            // Validate parameters for dlib matching
+            if (!unknownEncoding || !Array.isArray(unknownEncoding)) {
+                console.warn('Invalid unknown encoding for dlib matching');
+            } else if (!knownEncodings || !Array.isArray(knownEncodings) || knownEncodings.length === 0) {
+                console.warn('Invalid or empty known encodings for dlib matching');
+            } else {
+                const result = await this.pythonBridge.findBestMatch(unknownEncoding, knownEncodings, threshold);
+                
+                if (result.success) {
+                    return result.match;
+                } else {
+                    console.warn('Dlib matching failed, using fallback:', result.error);
+                }
+            }
+        }
+        
+        // Fallback matching logic
+        if (!unknownEncoding || !Array.isArray(unknownEncoding)) {
+            console.warn('Invalid unknown encoding for fallback matching');
+            return null;
+        }
+        
+        if (!knownEncodings || !Array.isArray(knownEncodings) || knownEncodings.length === 0) {
+            console.warn('No known encodings available for matching');
+            return null;
+        }
+        
         let bestMatch = null;
         let bestDistance = Infinity;
 
         for (let i = 0; i < knownEncodings.length; i++) {
-            const comparison = await this.compareFaces(unknownEncoding, knownEncodings[i].encoding, threshold);
+            const knownEncoding = knownEncodings[i].encoding;
+            
+            if (!knownEncoding || !Array.isArray(knownEncoding)) {
+                console.warn(`Skipping invalid encoding at index ${i}`);
+                continue;
+            }
+            
+            const comparison = await this.compareFaces(unknownEncoding, knownEncoding, threshold);
             
             if (comparison.match && comparison.distance < bestDistance) {
                 bestDistance = comparison.distance;
@@ -80,10 +190,42 @@ class FaceRecognitionService {
     }
 
     fallbackComparison(encoding1, encoding2, threshold) {
+        // Validate encodings
+        if (!encoding1 || !encoding2 || !Array.isArray(encoding1) || !Array.isArray(encoding2)) {
+            console.warn('Invalid encodings for comparison:', { 
+                enc1: !!encoding1, 
+                enc2: !!encoding2, 
+                enc1Array: Array.isArray(encoding1), 
+                enc2Array: Array.isArray(encoding2) 
+            });
+            return {
+                distance: 1,
+                match: false,
+                confidence: 0
+            };
+        }
+        
+        if (encoding1.length !== encoding2.length) {
+            console.warn('Encoding length mismatch:', encoding1.length, 'vs', encoding2.length);
+            return {
+                distance: 1,
+                match: false,
+                confidence: 0
+            };
+        }
+        
         // Simple cosine similarity for fallback
         const dotProduct = encoding1.reduce((sum, a, i) => sum + a * encoding2[i], 0);
         const magnitude1 = Math.sqrt(encoding1.reduce((sum, a) => sum + a * a, 0));
         const magnitude2 = Math.sqrt(encoding2.reduce((sum, a) => sum + a * a, 0));
+        
+        if (magnitude1 === 0 || magnitude2 === 0) {
+            return {
+                distance: 1,
+                match: false,
+                confidence: 0
+            };
+        }
         
         const similarity = dotProduct / (magnitude1 * magnitude2);
         const distance = 1 - similarity;

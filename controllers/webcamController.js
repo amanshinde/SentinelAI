@@ -108,6 +108,17 @@ exports.processWebcamFrame = async (req, res) => {
 
         // Get all known faces from database
         const knownFaces = await Face.find().select('name category encodings');
+        
+        if (knownFaces.length === 0) {
+            // Clean up temp file
+            fs.unlinkSync(tempPath);
+            return res.status(200).json({
+                success: true,
+                message: 'No known faces in database',
+                detections: []
+            });
+        }
+        
         const knownEncodings = knownFaces.map(face => ({
             id: face._id,
             name: face.name,
@@ -117,13 +128,29 @@ exports.processWebcamFrame = async (req, res) => {
 
         const results = [];
         
-        // Find webcam camera
-        const webcamCamera = await Camera.findOne({ name: 'Webcam' });
+        // Find or create webcam camera
+        let webcamCamera = await Camera.findOne({ name: 'Webcam' });
+        if (!webcamCamera) {
+            webcamCamera = await Camera.create({
+                name: 'Webcam',
+                location: 'Local Computer',
+                status: 'active',
+                createdBy: req.user.id
+            });
+        }
         
         for (const detectedFace of detectedFaces) {
+            // Get face encoding - handle both dlib and fallback formats
+            const faceEncoding = detectedFace.encoding || detectedFace.descriptor;
+            
+            if (!faceEncoding) {
+                console.warn('No encoding found for detected face, skipping');
+                continue;
+            }
+            
             // Find best match for this face
             const bestMatch = await faceRecognitionService.findBestMatch(
-                detectedFace.descriptor,
+                faceEncoding,
                 knownEncodings,
                 0.6
             );
